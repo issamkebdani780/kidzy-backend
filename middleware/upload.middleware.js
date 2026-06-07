@@ -16,7 +16,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB max
+    fileSize: 50 * 1024 * 1024, // 15 MB max (phone cameras can produce large files)
   },
 });
 
