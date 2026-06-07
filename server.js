@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import pool from './database.js';
 import orderRouter from './Router/order.router.js';
 import contactRouter from './Router/contact.router.js';
+import authRouter from './Router/auth.router.js';
 
 dotenv.config();
 
@@ -48,8 +49,10 @@ app.use(express.urlencoded({ extended: true }));
 // ──────────────────────────────────────────
 // Routes
 // ──────────────────────────────────────────
+app.use('/api/auth', authRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/contact', contactRouter);
+
 
 // Health check
 app.get('/', (req, res) => {

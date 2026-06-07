@@ -136,3 +136,23 @@ export const updateOrderStatus = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
   }
 };
+
+// ─────────────────────────────────────────────
+// DELETE /api/orders/:id
+// Permanently delete an order
+// ─────────────────────────────────────────────
+export const deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query('DELETE FROM orders WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Order deleted successfully.' });
+  } catch (error) {
+    console.error('❌ deleteOrder error:', error);
+    return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
+  }
+};
