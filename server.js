@@ -141,6 +141,19 @@ async function initDatabase() {
     `);
     console.log("✅ Table 'contacts' is ready.");
 
+    // Order Histories table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS order_histories (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        order_id    INT           NOT NULL,
+        status      VARCHAR(50)   NOT NULL,
+        notes       VARCHAR(255)  NULL,
+        created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_order_history FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    console.log("✅ Table 'order_histories' is ready.");
+
     // Run Migration: Add is_viewed column to contacts if not exists
     try {
       await conn.query("ALTER TABLE contacts ADD COLUMN is_viewed TINYINT(1) NOT NULL DEFAULT 0");

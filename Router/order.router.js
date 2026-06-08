@@ -7,6 +7,7 @@ import {
   getOrderById,
   updateOrderStatus,
   deleteOrder,
+  getOrderHistory,
 } from '../controller/order.controller.js';
 
 const router = Router();
@@ -20,6 +21,9 @@ router.get('/', authMiddleware, getAllOrders);
 // GET /api/orders/:id — Get single order (Admin only)
 router.get('/:id', authMiddleware, getOrderById);
 
+// GET /api/orders/:id/history — Get order status change logs (Admin only)
+router.get('/:id/history', authMiddleware, getOrderHistory);
+
 // PUT /api/orders/:id/status — Update order status (Admin only)
 router.put('/:id/status', authMiddleware, updateOrderStatus);
 
@@ -27,4 +31,5 @@ router.put('/:id/status', authMiddleware, updateOrderStatus);
 router.delete('/:id', authMiddleware, deleteOrder);
 
 export default router;
+
 

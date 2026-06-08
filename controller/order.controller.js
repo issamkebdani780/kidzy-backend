@@ -37,6 +37,16 @@ export const createOrder = async (req, res) => {
       [kidName, phone, storyType, imageUrl, imagePublicId]
     );
 
+    // Track order initial history status
+    try {
+      await pool.query(
+        `INSERT INTO order_histories (order_id, status, notes) VALUES (?, 'pending', 'Order placed successfully')`,
+        [result.insertId]
+      );
+    } catch (histErr) {
+      console.warn('⚠️ Failed to write initial order history:', histErr.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: 'تم تقديم طلبك بنجاح! سنتواصل معك قريباً.',
@@ -130,6 +140,16 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
+    // Track status change history
+    try {
+      await pool.query(
+        `INSERT INTO order_histories (order_id, status, notes) VALUES (?, ?, CONCAT('Status updated to ', ?))`,
+        [id, status, status]
+      );
+    } catch (histErr) {
+      console.warn('⚠️ Failed to write order status history:', histErr.message);
+    }
+
     return res.status(200).json({ success: true, message: 'Order status updated.', status });
   } catch (error) {
     console.error('❌ updateOrderStatus error:', error);
@@ -156,3 +176,22 @@ export const deleteOrder = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
   }
 };
+
+// ─────────────────────────────────────────────
+// GET /api/orders/:id/history
+// Returns status update history logs for a specific order
+// ─────────────────────────────────────────────
+export const getOrderHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [history] = await pool.query(
+      'SELECT id, order_id, status, notes, created_at FROM order_histories WHERE order_id = ? ORDER BY created_at DESC',
+      [id]
+    );
+    return res.status(200).json({ success: true, history });
+  } catch (error) {
+    console.error('❌ getOrderHistory error:', error);
+    return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
+  }
+};
+
