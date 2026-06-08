@@ -95,12 +95,39 @@ async function initDatabase() {
         story_type      VARCHAR(50)   NOT NULL,
         image_url       TEXT          NOT NULL,
         image_public_id VARCHAR(255)  NULL,
-        status          ENUM('pending','processing','shipped','delivered','cancelled')
+        status          ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'piad')
                         NOT NULL DEFAULT 'pending',
         created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
     console.log("✅ Table 'orders' is ready.");
+
+    // Run Migration: Alter status ENUM if table already exists with old ENUM
+    try {
+      // 1. Temporarily allow both old and new ENUM values to prevent constraint errors during migration
+      await conn.query(`
+        ALTER TABLE orders MODIFY COLUMN status 
+        ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled', 'img_confiremed', 'in delivery', 'paid', 'piad') 
+        NOT NULL DEFAULT 'pending';
+      `);
+      
+      // 2. Map old values to new values
+      await conn.query("UPDATE orders SET status = 'img_confiremed' WHERE status = 'processing'");
+      await conn.query("UPDATE orders SET status = 'in delivery' WHERE status = 'shipped'");
+      await conn.query("UPDATE orders SET status = 'paid' WHERE status = 'delivered'");
+      await conn.query("UPDATE orders SET status = 'pending' WHERE status = 'cancelled'"); // Map cancelled back to pending or defaults
+      
+      // 3. Set the final strict ENUM list
+      await conn.query(`
+        ALTER TABLE orders MODIFY COLUMN status 
+        ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'piad') 
+        NOT NULL DEFAULT 'pending';
+      `);
+      
+      console.log("✅ Database status ENUM migration ran successfully.");
+    } catch (migErr) {
+      console.log("ℹ️ Migration check passed or already applied:", migErr.message);
+    }
 
     // Contacts table
     await conn.query(`
@@ -121,6 +148,7 @@ async function initDatabase() {
     // Do NOT crash the server — APIs will return DB errors per-request
   }
 }
+
 
 // ──────────────────────────────────────────
 // Start Server
