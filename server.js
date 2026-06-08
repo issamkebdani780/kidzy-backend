@@ -98,7 +98,7 @@ async function initDatabase() {
         kid_char_image_url       TEXT          NULL,
         kid_char_image_public_id VARCHAR(255)  NULL,
         canva_url                TEXT          NULL,
-        status                   ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled')
+        status                   ENUM('pending', 'confiremed', 'cancelled', 'no answer', 'img_confieremed', 'in_preparation', 'in_delivery', 'paid', 'routeur')
                                  NOT NULL DEFAULT 'pending',
         created_at               TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -110,19 +110,18 @@ async function initDatabase() {
       // 1. Temporarily allow both old and new ENUM values to prevent constraint errors during migration
       await conn.query(`
         ALTER TABLE orders MODIFY COLUMN status 
-        ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled', 'img_confiremed', 'in delivery', 'paid', 'piad') 
+        ENUM('pending', 'confiremed', 'cancelled', 'no answer', 'img_confieremed', 'in_preparation', 'in_delivery', 'paid', 'routeur', 'img_confiremed', 'in delivery') 
         NOT NULL DEFAULT 'pending';
       `);
       
       // 2. Map old values to new values
-      await conn.query("UPDATE orders SET status = 'img_confiremed' WHERE status = 'processing'");
-      await conn.query("UPDATE orders SET status = 'in delivery' WHERE status = 'shipped'");
-      await conn.query("UPDATE orders SET status = 'paid' WHERE status = 'delivered' OR status = 'piad'");
+      await conn.query("UPDATE orders SET status = 'img_confieremed' WHERE status = 'img_confiremed'");
+      await conn.query("UPDATE orders SET status = 'in_delivery' WHERE status = 'in delivery'");
       
-      // 3. Set the final strict ENUM list (removing piad, adding cancelled)
+      // 3. Set the final strict ENUM list
       await conn.query(`
         ALTER TABLE orders MODIFY COLUMN status 
-        ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled') 
+        ENUM('pending', 'confiremed', 'cancelled', 'no answer', 'img_confieremed', 'in_preparation', 'in_delivery', 'paid', 'routeur') 
         NOT NULL DEFAULT 'pending';
       `);
       
