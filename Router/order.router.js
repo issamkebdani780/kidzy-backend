@@ -6,6 +6,7 @@ import {
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  updateOrder,
   deleteOrder,
   getOrderHistory,
 } from '../controller/order.controller.js';
@@ -26,6 +27,9 @@ router.get('/:id/history', authMiddleware, getOrderHistory);
 
 // PUT /api/orders/:id/status — Update order status (Admin only)
 router.put('/:id/status', authMiddleware, updateOrderStatus);
+
+// PUT /api/orders/:id — Update order details including character image and Canva URL (Admin only)
+router.put('/:id', authMiddleware, upload.single('character_image'), updateOrder);
 
 // DELETE /api/orders/:id — Delete an order (Admin only)
 router.delete('/:id', authMiddleware, deleteOrder);

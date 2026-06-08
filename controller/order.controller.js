@@ -74,7 +74,7 @@ export const getAllOrders = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const [orders] = await pool.query(
-      `SELECT id, kid_name, phone, story_type, image_url, status, created_at
+      `SELECT id, kid_name, phone, story_type, image_url, kid_char_image_url, canva_url, status, created_at
        FROM orders
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
@@ -191,6 +191,112 @@ export const getOrderHistory = async (req, res) => {
     return res.status(200).json({ success: true, history });
   } catch (error) {
     console.error('❌ getOrderHistory error:', error);
+    return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PUT /api/orders/:id
+// Update general order details including character image and Canva link
+// ─────────────────────────────────────────────
+export const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { canva_url, status } = req.body;
+
+    // Fetch existing order
+    const [[order]] = await pool.query('SELECT * FROM orders WHERE id = ?', [id]);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    let kidCharImageUrl = order.kid_char_image_url;
+    let kidCharImagePublicId = order.kid_char_image_public_id;
+
+    // Upload new character image to Cloudinary if supplied
+    if (req.file) {
+      const { url: imageUrl, public_id: imagePublicId } = await uploadToCloudinary(
+        req.file.buffer,
+        'kidzy/orders'
+      );
+      kidCharImageUrl = imageUrl;
+      kidCharImagePublicId = imagePublicId;
+    }
+
+    // Prepare dynamic update query
+    let updateFields = [];
+    let params = [];
+
+    // Always update character image fields (either new one uploaded or keeping old ones)
+    updateFields.push('kid_char_image_url = ?', 'kid_char_image_public_id = ?');
+    params.push(kidCharImageUrl, kidCharImagePublicId);
+
+    if (canva_url !== undefined) {
+      updateFields.push('canva_url = ?');
+      params.push(canva_url === '' ? null : canva_url);
+    }
+
+    if (status !== undefined) {
+      const validStatuses = ['pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Status must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+      updateFields.push('status = ?');
+      params.push(status);
+    }
+
+    const updateQuery = `UPDATE orders SET ${updateFields.join(', ')} WHERE id = ?`;
+    params.push(id);
+
+    await pool.query(updateQuery, params);
+
+    // Logging: status change
+    if (status !== undefined && status !== order.status) {
+      try {
+        await pool.query(
+          `INSERT INTO order_histories (order_id, status, notes) VALUES (?, ?, CONCAT('Status updated to ', ?))`,
+          [id, status, status]
+        );
+      } catch (histErr) {
+        console.warn('⚠️ Failed to write status change history:', histErr.message);
+      }
+    }
+
+    // Logging: updates to character image or Canva URL
+    if (req.file || (canva_url !== undefined && canva_url !== order.canva_url)) {
+      let noteParts = [];
+      if (req.file) noteParts.push('character image uploaded');
+      if (canva_url !== undefined && canva_url !== order.canva_url) noteParts.push('Canva URL updated');
+      try {
+        await pool.query(
+          `INSERT INTO order_histories (order_id, status, notes) VALUES (?, ?, ?)`,
+          [id, status || order.status, `Admin updated: ${noteParts.join(', ')}`]
+        );
+      } catch (histErr) {
+        console.warn('⚠️ Failed to write order details history:', histErr.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Order updated successfully.',
+      order: {
+        id: parseInt(id),
+        kid_name: order.kid_name,
+        phone: order.phone,
+        story_type: order.story_type,
+        image_url: order.image_url,
+        kid_char_image_url: kidCharImageUrl,
+        canva_url: canva_url !== undefined ? (canva_url === '' ? null : canva_url) : order.canva_url,
+        status: status !== undefined ? status : order.status,
+        created_at: order.created_at
+      }
+    });
+  } catch (error) {
+    console.error('❌ updateOrder error:', error);
     return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
   }
 };

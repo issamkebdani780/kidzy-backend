@@ -89,15 +89,18 @@ async function initDatabase() {
     // Orders table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS orders (
-        id              INT AUTO_INCREMENT PRIMARY KEY,
-        kid_name        VARCHAR(100)  NOT NULL,
-        phone           VARCHAR(20)   NOT NULL,
-        story_type      VARCHAR(50)   NOT NULL,
-        image_url       TEXT          NOT NULL,
-        image_public_id VARCHAR(255)  NULL,
-        status          ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled')
-                        NOT NULL DEFAULT 'pending',
-        created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        id                       INT AUTO_INCREMENT PRIMARY KEY,
+        kid_name                 VARCHAR(100)  NOT NULL,
+        phone                    VARCHAR(20)   NOT NULL,
+        story_type               VARCHAR(50)   NOT NULL,
+        image_url                TEXT          NOT NULL,
+        image_public_id          VARCHAR(255)  NULL,
+        kid_char_image_url       TEXT          NULL,
+        kid_char_image_public_id VARCHAR(255)  NULL,
+        canva_url                TEXT          NULL,
+        status                   ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled')
+                                 NOT NULL DEFAULT 'pending',
+        created_at               TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
     console.log("✅ Table 'orders' is ready.");
@@ -160,6 +163,26 @@ async function initDatabase() {
       console.log("✅ Database contacts table is_viewed column migration ran successfully.");
     } catch (migErr) {
       console.log("ℹ️ Contacts is_viewed column already exists.");
+    }
+
+    // Run Migration: Add kid_char_image_url, kid_char_image_public_id, and canva_url columns to orders if not exist
+    try {
+      await conn.query("ALTER TABLE orders ADD COLUMN kid_char_image_url TEXT NULL");
+      console.log("✅ Database orders table kid_char_image_url column migration ran successfully.");
+    } catch (migErr) {
+      console.log("ℹ️ Orders kid_char_image_url column already exists.");
+    }
+    try {
+      await conn.query("ALTER TABLE orders ADD COLUMN kid_char_image_public_id VARCHAR(255) NULL");
+      console.log("✅ Database orders table kid_char_image_public_id column migration ran successfully.");
+    } catch (migErr) {
+      console.log("ℹ️ Orders kid_char_image_public_id column already exists.");
+    }
+    try {
+      await conn.query("ALTER TABLE orders ADD COLUMN canva_url TEXT NULL");
+      console.log("✅ Database orders table canva_url column migration ran successfully.");
+    } catch (migErr) {
+      console.log("ℹ️ Orders canva_url column already exists.");
     }
 
     conn.release();
