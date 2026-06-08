@@ -95,7 +95,7 @@ async function initDatabase() {
         story_type      VARCHAR(50)   NOT NULL,
         image_url       TEXT          NOT NULL,
         image_public_id VARCHAR(255)  NULL,
-        status          ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'piad')
+        status          ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled')
                         NOT NULL DEFAULT 'pending',
         created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -114,13 +114,12 @@ async function initDatabase() {
       // 2. Map old values to new values
       await conn.query("UPDATE orders SET status = 'img_confiremed' WHERE status = 'processing'");
       await conn.query("UPDATE orders SET status = 'in delivery' WHERE status = 'shipped'");
-      await conn.query("UPDATE orders SET status = 'paid' WHERE status = 'delivered'");
-      await conn.query("UPDATE orders SET status = 'pending' WHERE status = 'cancelled'"); // Map cancelled back to pending or defaults
+      await conn.query("UPDATE orders SET status = 'paid' WHERE status = 'delivered' OR status = 'piad'");
       
-      // 3. Set the final strict ENUM list
+      // 3. Set the final strict ENUM list (removing piad, adding cancelled)
       await conn.query(`
         ALTER TABLE orders MODIFY COLUMN status 
-        ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'piad') 
+        ENUM('pending', 'img_confiremed', 'in delivery', 'paid', 'cancelled') 
         NOT NULL DEFAULT 'pending';
       `);
       
