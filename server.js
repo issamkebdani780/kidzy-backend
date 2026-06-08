@@ -135,10 +135,19 @@ async function initDatabase() {
         name       VARCHAR(100) NOT NULL,
         phone      VARCHAR(20)  NOT NULL,
         message    TEXT         NOT NULL,
+        is_viewed  TINYINT(1)   NOT NULL DEFAULT 0,
         created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
     console.log("✅ Table 'contacts' is ready.");
+
+    // Run Migration: Add is_viewed column to contacts if not exists
+    try {
+      await conn.query("ALTER TABLE contacts ADD COLUMN is_viewed TINYINT(1) NOT NULL DEFAULT 0");
+      console.log("✅ Database contacts table is_viewed column migration ran successfully.");
+    } catch (migErr) {
+      console.log("ℹ️ Contacts is_viewed column already exists.");
+    }
 
     conn.release();
   } catch (err) {

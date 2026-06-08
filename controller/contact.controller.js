@@ -117,3 +117,24 @@ export const deleteContact = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
   }
 };
+
+// ─────────────────────────────────────────────
+// PUT /api/contact/:id/view
+// Mark a contact message as viewed (read)
+// ─────────────────────────────────────────────
+export const viewContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await pool.query('UPDATE contacts SET is_viewed = 1 WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Contact not found.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Contact message marked as viewed.' });
+  } catch (error) {
+    console.error('❌ viewContact error:', error);
+    return res.status(500).json({ success: false, message: 'Server error.', error: error.message });
+  }
+};
+
